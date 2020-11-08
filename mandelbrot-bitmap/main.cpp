@@ -1,6 +1,8 @@
+#include <cstdint>
 #include <iostream>
 
 #include "Bitmap.h"
+#include "Mandelbrot.h"
 
 using namespace std;
 using namespace mandelbrot_bitmap;
@@ -20,11 +22,14 @@ int main() {
 			// Temporary Scaling Implementation
 			double x_fractal = (x - kWidth / 2) * 2.0/kWidth;
 			double y_fractal = (y - kHeight / 2) * 2.0/kHeight;
+
+			int iterations = Mandelbrot::GetIterations(x_fractal, y_fractal);
+
+			uint8_t red = (uint8_t)((double)iterations / Mandelbrot::kMaxIterations * 256);
+			
+			bitmap.SetPixel(x, y, red, 0, 0);
 		}
 	}
-
-	cout << "min: " << min << endl;
-	cout << "max: " << max << endl;
 
 	bitmap.Write("test.bmp");
 
