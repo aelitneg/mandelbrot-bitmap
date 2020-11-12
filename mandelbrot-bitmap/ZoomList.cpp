@@ -5,7 +5,7 @@ namespace mandelbrot_bitmap {
 
 	void ZoomList::Add(const Zoom& zoom) {
 		x_center_ += (zoom.x - width_ / 2) * scale_;
-		y_center_ += (zoom.y - height_ / 2) * scale_;
+		y_center_ += -(zoom.y - height_ / 2) * scale_;
 
 		scale_ *= zoom.scale;
 

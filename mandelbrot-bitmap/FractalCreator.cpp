@@ -11,6 +11,31 @@ namespace mandelbrot_bitmap {
 		zoomList_.Add(Zoom(width_ / 2, height_ / 2, 4.0 / width_));
 	}
 
+	void FractalCreator::AddRange(double rangeEnd, const RGB& rgb) {
+		ranges_.push_back(rangeEnd * Mandelbrot::kMaxIterations);
+		colors_.push_back(rgb);
+
+		if (got_first_range_) {
+			range_totals_.push_back(0);
+		}
+
+		got_first_range_ = true;
+	}
+
+	void FractalCreator::AddZoom(const Zoom& zoom) {
+		zoomList_.Add(zoom);
+	}
+
+	void FractalCreator::Run(string filename) {
+		CalculateIterations();
+		CalculateTotalIterations();
+		CalculateRangeTotals();
+
+		DrawFractal();
+
+		WriteBitmap(filename);
+	}
+
 	void FractalCreator::CalculateIterations() {
 		for (int y = 0; y < height_; y++) {
 			for (int x = 0; x < width_; x++) {
@@ -33,6 +58,39 @@ namespace mandelbrot_bitmap {
 		}
 	}
 
+	void FractalCreator::CalculateRangeTotals() {
+		int range_index = 0;
+
+		for (int i = 0; i < Mandelbrot::kMaxIterations; i++) {
+			int pixels = histogram_[i];
+
+			if (i >= ranges_[range_index + 1]) {
+				range_index++;
+			}
+
+			range_totals_[range_index] += pixels;
+		}
+	}
+
+	int FractalCreator::GetRange(int iterations) const{
+		int range = 0;
+
+		for (int i = 1; i < ranges_.size(); i++) {
+			range = i;
+
+			if (ranges_[i] > iterations) {
+				break;
+			}
+		}
+
+		range--;
+
+		assert(range > -1);
+		assert(range < ranges_.size());
+
+		return range;
+	}
+
 	void FractalCreator::DrawFractal() {
 		for (int y = 0; y < height_; y++) {
 			for (int x = 0; x < width_; x++) {
@@ -42,13 +100,25 @@ namespace mandelbrot_bitmap {
 
 				int iterations = fractal_[y * width_ + x];
 
+				int range = GetRange(iterations);
+				int rangeTotal = range_totals_[range];
+				int rangeStart = ranges_[range];
+
+				RGB& startColor = colors_[range];
+				RGB& endColor = colors_[range + 1];
+
+				RGB colorDiff = endColor - startColor;
+
 				if (iterations != Mandelbrot::kMaxIterations) {
-					double hue = 0.0;
-					for (int i = 0; i <= iterations; i++) {
-						hue += ((double)histogram_[i]) / total_;
+					int totalPixels = 0;
+
+					for (int i = rangeStart; i <= iterations; i++) {
+						totalPixels += histogram_[i];
 					}
 
-					green = pow(255, hue);
+					red = startColor.r + colorDiff.r * (double)totalPixels / rangeTotal;
+					green = startColor.g + colorDiff.g * (double)totalPixels / rangeTotal;
+					blue = startColor.b + colorDiff.b * (double)totalPixels / rangeTotal;
 				}
 
 				bitmap_.SetPixel(x, y, red, green, blue);
@@ -58,9 +128,5 @@ namespace mandelbrot_bitmap {
 
 	void FractalCreator::WriteBitmap(string filename) {
 		bitmap_.Write(filename);
-	}
-
-	void FractalCreator::AddZoom(const Zoom& zoom) {
-		zoomList_.Add(zoom);
 	}
 }
